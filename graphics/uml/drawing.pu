@@ -1,0 +1,31 @@
+@startuml
+
+actor User
+participant Pixels
+participant Controller
+participant Tool
+
+loop until shutdown
+    User -> Pixels: Mouse press/release/drag events
+    activate Pixels
+    Pixels -> Controller: press/release/update(point)
+    activate Controller
+    Controller -> Tool: press/release/update(ctrl, point)
+    activate Tool
+    Tool -> Controller: change the image
+    activate Controller
+    Controller -> Pixels: onChange()
+    activate Pixels
+    Pixels -> Pixels: redraw
+    Pixels --> Controller
+    deactivate Pixels
+    Tool <-- Controller
+    deactivate Controller
+    Tool --> Controller
+    deactivate Tool
+    Controller --> Pixels
+    deactivate Controller
+    Pixels --> User
+end loop
+
+@enduml

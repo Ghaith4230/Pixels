@@ -1,0 +1,17 @@
+.color-picker .color-rect-pane {
+    -fx-background-color: null;
+}
+
+.color-picker .color-rect {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.color-picker .color-labels {
+    -fx-background-color: null;
+    -fx-text-fill: black;
+}
+
+.color-picker .custom-color-label {
+    -fx-font-size: 1.2em;
+}

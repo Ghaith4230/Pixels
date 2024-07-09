@@ -1,0 +1,209 @@
+package dtu.compute.pixels.view;
+
+import dtu.compute.pixels.controller.Controller;
+import dtu.compute.pixels.controller.Observer;
+import dtu.compute.pixels.controller.tools.Pen;
+import dtu.compute.pixels.controller.tools.Shortcuts;
+import dtu.compute.pixels.model.Color;
+import dtu.compute.pixels.model.Image;
+import dtu.compute.pixels.model.Point;
+import dtu.compute.pixels.model.Rect;
+import dtu.compute.pixels.util.ColorUtils;
+import dtu.compute.pixels.util.ImageUtils;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.ToolBar;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Paint;
+import javafx.stage.Stage;
+
+public class Pixels extends Application implements Observer {
+
+  // Constants for the initial and canvas size
+  private final static Rect START_SIZE = new Rect(1000, 700);
+  private final static Rect CANVAS_SIZE = new Rect(600, 600);
+  public final Controller ctrl;
+  private Canvas canvas;
+  static  BorderPane layout;
+  ToolBarFactory tbf;
+  private double currentMouseX;
+  private double currentMouseY;
+
+
+  public Pixels() {
+    ctrl = new Controller()
+        .setColor(Color.fromARGB(0xff000000))
+        .setTool(new Pen());
+  }
+
+  public static void main(String[] args) {
+    launch(args);
+  }
+
+  @Override
+  public void start(Stage stage) {
+    final BorderPane layout = new BorderPane();
+    ctrl.setImage(new Image(new Rect(200 , 200)));
+    ctrl.images.add(ctrl.getImage());
+    layout.setTop(MenuBarFactory.create(stage, ctrl));
+    MenuBarFactory.addLayerMenuItem(new MenuBarFactory.MenuController(ctrl));
+
+    // Create canvas and set it in the center of the layout
+    canvas = createCanvas(CANVAS_SIZE);
+    layout.setCenter(canvas);
+
+    tbf = new ToolBarFactory(ctrl);
+
+    ToolBar tb = tbf.returnToolBar();
+
+    // Set up the toolbar and place it at the bottom
+    layout.setBottom(tb);
+    
+   
+    Scene scene = new Scene(layout, START_SIZE.width(), START_SIZE.height(),
+        javafx.scene.paint.Color.GRAY);
+    Shortcuts.addShortcuts(scene, ctrl);  // **Shortcuts.java, Call the method to add keyboard shortcuts to the scene
+
+    stage.setTitle("Pixels");
+    stage.setScene(scene);
+    stage.show();
+
+    // Set the stage to "maximized" mode (normal full screen)
+    stage.setMaximized(true);
+
+    ctrl.addObserver(this);
+  }
+
+  // Create canvas and set up its behavior for mouse events
+  private Canvas createCanvas(Rect size) {
+    Canvas view = new Canvas(size.width(), size.height());
+    final var context = view.getGraphicsContext2D();
+    context.setImageSmoothing(false);
+
+    view.setOnMousePressed(e -> {
+        if (e.getButton() == MouseButton.PRIMARY) {
+            ctrl.setColor(ctrl.getPrimaryColor());
+            ctrl.press(getPointFromEvent(size, e));
+        } else if (e.getButton() == MouseButton.SECONDARY) {
+            ctrl.setColor(ctrl.getSecondaryColor());
+            ctrl.press(getPointFromEvent(size, e));
+        } else {
+            ctrl.abandon();
+        }
+    });
+
+    view.setOnMouseReleased(e -> {
+        if (e.isPrimaryButtonDown() || e.isSecondaryButtonDown()) {
+            return;
+        }
+        ctrl.release(getPointFromEvent(size, e));
+    });
+
+    // Handle mouse dragging for drawing
+    view.setOnMouseDragged(e -> {
+        if (e.getButton() == MouseButton.PRIMARY || e.getButton() == MouseButton.SECONDARY) {
+            ctrl.update(getPointFromEvent(size, e));
+        }
+    });
+
+    view.setOnMouseMoved(e -> {
+      ctrl.update(getPointFromEvent(size, e));
+      currentMouseY = e.getY();
+      currentMouseX = e.getX();
+  });
+  
+    
+    return view;
+  }
+
+  private Point getPointFromEvent(Rect size, MouseEvent e) {
+    Rect bufferSize = ctrl.getImage().getSize();
+    double x = e.getX();
+    double y = e.getY();
+
+    int px = (int) Math.max(0, Math.min(bufferSize.width() - 1, Math.floor(x / size.width() * bufferSize.width())));
+    int py = (int) Math.max(0, Math.min(bufferSize.height() - 1, Math.floor(y / size.height() * bufferSize.height())));
+
+    return new Point(px, py);
+  }
+  
+  public void redraw() {
+    GraphicsContext ctx = canvas.getGraphicsContext2D();
+    ctx.setFill(Paint.valueOf("white"));
+    ctx.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+    
+    for (Image layer : ctrl.images) {
+      if(layer != null){
+      javafx.scene.image.Image img = ImageUtils.asJavaFXImage(layer);
+      ctx.drawImage(img,
+              0, 0, img.getWidth(), img.getHeight(),
+              0, 0, canvas.getWidth(), canvas.getHeight());
+      }
+    } 
+
+    javafx.scene.image.Image himg = ImageUtils.asJavaFXImage(ctrl.getScratch());
+    ctx.drawImage(himg,
+            0, 0, himg.getWidth(), himg.getHeight(),
+            0, 0, canvas.getWidth(), canvas.getHeight());
+
+    //  grid
+    if (ctrl.isShowGrid()) {
+      drawGrid(ctx);
+    }
+
+    // Guidelines
+    if (ctrl.isShowGuidelines()) {
+      drawGuidelines(ctx);
+    }
+  }
+
+  private void drawGrid(GraphicsContext ctx) {
+    int cellSize = 50; 
+    for (int x = 0; x < canvas.getWidth(); x += cellSize) {
+        for (int y = 0; y < canvas.getHeight(); y += cellSize) {
+            ctx.strokeLine(x, 0, x, canvas.getHeight());
+            ctx.strokeLine(0, y, canvas.getWidth(), y);
+        }
+    }
+  }
+
+  private void drawGuidelines(GraphicsContext ctx) {
+    ctx.strokeLine(0, canvas.getHeight() / 2, canvas.getWidth(), canvas.getHeight() / 2);
+    ctx.strokeLine(canvas.getWidth() / 2, 0, canvas.getWidth() / 2, canvas.getHeight());
+  } 
+
+  @Override
+  public void onChange() {
+    redraw();
+    if(ctrl.zoomAllowed){
+      updateZoom();
+      }
+    
+  }
+
+    private void updateZoom() {
+      double zoomFactor = 1.2;
+      double zoomLevel = ctrl.getZoomLevel();
+
+      double mouseX = currentMouseX;
+      double mouseY = currentMouseY;
+
+      double canvasWidth = canvas.getWidth();
+      double canvasHeight = canvas.getHeight();
+
+      double offsetX = (mouseX - canvasWidth / 2) / canvasWidth;
+      double offsetY = (mouseY - canvasHeight / 2) / canvasHeight;
+
+      canvas.setScaleX(zoomLevel * zoomFactor);
+      canvas.setScaleY(zoomLevel * zoomFactor);
+
+      canvas.setTranslateX(canvas.getTranslateX() + offsetX * canvasWidth * (1 - zoomFactor));
+      canvas.setTranslateY(canvas.getTranslateY() + offsetY * canvasHeight * (1 - zoomFactor));
+  }
+  
+}
