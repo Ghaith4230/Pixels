@@ -1,24 +1,7 @@
 package dtu.compute.pixels.view;
 
 import dtu.compute.pixels.controller.Controller;
-import dtu.compute.pixels.controller.tools.Pen;
-import dtu.compute.pixels.controller.tools.PentagonTool;
-import dtu.compute.pixels.controller.tools.RotateTool;
-import dtu.compute.pixels.controller.tools.SprayTool;
-import dtu.compute.pixels.controller.tools.SquareTool;
-import dtu.compute.pixels.controller.tools.StarTool;
-import dtu.compute.pixels.controller.tools.TriangleTool;
-import dtu.compute.pixels.controller.tools.Eraser;
-import dtu.compute.pixels.controller.tools.GradientTool;
-import dtu.compute.pixels.controller.tools.HexagonTool;
-import dtu.compute.pixels.controller.tools.MoveTool;
-import dtu.compute.pixels.controller.tools.OctagramTool;
-import dtu.compute.pixels.controller.tools.OvalTool;
-import dtu.compute.pixels.controller.tools.SelectTool;
-import dtu.compute.pixels.controller.tools.LineTool;
-import dtu.compute.pixels.controller.tools.ColorFill;
-import dtu.compute.pixels.controller.tools.DottedTool;
-import dtu.compute.pixels.controller.tools.Pippet;
+import dtu.compute.pixels.controller.tools.*;
 import dtu.compute.pixels.util.ColorUtils;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -70,19 +53,19 @@ public class ToolBarFactory {
 
         Rectangle colorFill = makeButton("bucket","colorFill");
 
-        Label zoomLabel = new Label("Zoom: 1x ");
-        zoomLabel.getStyleClass().add("label");
-        Slider zoomSlider = new Slider(1, 11, 1);
-        zoomSlider.setPrefWidth(150);
-        zoomSlider.setShowTickMarks(true);
-        zoomSlider.setMajorTickUnit(5);
-        zoomSlider.setMinorTickCount(3);
-        zoomSlider.setBlockIncrement(1);
-        zoomSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            ctrl.setZoomLevel(newVal.doubleValue());
-            zoomLabel.setText("Zoom level: " + (int) zoomSlider.getValue() + "x ");
-
-        });
+//        Label zoomLabel = new Label("Zoom: 1x ");
+//        zoomLabel.getStyleClass().add("label");
+//        Slider zoomSlider = new Slider(1, 11, 1);
+//        zoomSlider.setPrefWidth(150);
+//        zoomSlider.setShowTickMarks(true);
+//        zoomSlider.setMajorTickUnit(5);
+//        zoomSlider.setMinorTickCount(3);
+//        zoomSlider.setBlockIncrement(1);
+//        zoomSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+//            ctrl.setZoomLevel(newVal.doubleValue());
+//            zoomLabel.setText("Zoom level: " + (int) zoomSlider.getValue() + "x ");
+//
+//        });
 
         Button pen = new Button("", createIcon("pen"));
         pen.setOnAction(e -> {
@@ -91,6 +74,9 @@ public class ToolBarFactory {
         });
 
        Rectangle pipette = makeButton("pipette","pipette");
+
+
+       Rectangle  text = makeButton("font","text");
 
 
 
@@ -280,7 +266,7 @@ public class ToolBarFactory {
 
         //HBox for all the utility buttons
         HBox utilities = new HBox(15);
-        utilities.getChildren().addAll(picker,colorFill,pipette, eraser);
+        utilities.getChildren().addAll(picker,colorFill,pipette, eraser,text);
 
         colorPallete.setPadding(new Insets(3,5,0,5));
         colorPaleteAndUtilities.getChildren().addAll(colorPallete,utilities);
@@ -396,8 +382,6 @@ public class ToolBarFactory {
 
 
             grid.add(rectangle,xCordinate, yCordinate);
-
-            System.out.println("x coordinate" + xCordinate + " y " + yCordinate);
             xCordinate += 1;
             if(xCordinate == (colors.size() / 2) - 1){
                 xCordinate = 0;
@@ -537,6 +521,9 @@ public class ToolBarFactory {
                   break;
               case "colorFill":
                   ctrl.setTool(new ColorFill());
+                  break;
+              case "text":
+                  ctrl.setTool(new Text());
                   break;
           }
           selectedTool =button;

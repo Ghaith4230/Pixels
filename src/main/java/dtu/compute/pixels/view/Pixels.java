@@ -4,22 +4,31 @@ import dtu.compute.pixels.controller.Controller;
 import dtu.compute.pixels.controller.Observer;
 import dtu.compute.pixels.controller.tools.Pen;
 import dtu.compute.pixels.controller.tools.Shortcuts;
+import dtu.compute.pixels.controller.tools.Text;
 import dtu.compute.pixels.model.Color;
 import dtu.compute.pixels.model.Image;
 import dtu.compute.pixels.model.Point;
 import dtu.compute.pixels.model.Rect;
-import dtu.compute.pixels.util.ColorUtils;
 import dtu.compute.pixels.util.ImageUtils;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Label;
 import javafx.scene.control.ToolBar;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Pixels extends Application implements Observer {
 
@@ -32,6 +41,9 @@ public class Pixels extends Application implements Observer {
   ToolBarFactory tbf;
   private double currentMouseX;
   private double currentMouseY;
+  Pane root;
+  Label currentElement = new Label("");
+
 
 
   public Pixels() {
@@ -46,6 +58,8 @@ public class Pixels extends Application implements Observer {
 
   @Override
   public void start(Stage stage) {
+
+    root = new StackPane();
     final BorderPane layout = new BorderPane();
     ctrl.setImage(new Image(new Rect(200 , 200)));
     ctrl.images.add(ctrl.getImage());
@@ -54,7 +68,9 @@ public class Pixels extends Application implements Observer {
 
     // Create canvas and set it in the center of the layout
     canvas = createCanvas(CANVAS_SIZE);
-    layout.setCenter(canvas);
+
+    root.getChildren().addAll(canvas);
+    layout.setCenter(root);
 
     tbf = new ToolBarFactory(ctrl);
 
@@ -66,7 +82,18 @@ public class Pixels extends Application implements Observer {
    
     Scene scene = new Scene(layout, START_SIZE.width(), START_SIZE.height(),
         javafx.scene.paint.Color.GRAY);
-    Shortcuts.addShortcuts(scene, ctrl);  // **Shortcuts.java, Call the method to add keyboard shortcuts to the scene
+    Shortcuts.addShortcuts(scene, ctrl);
+
+    scene.setOnKeyPressed(e -> {
+      String keyPressed = e.getText();
+
+      if( e.getCode() != KeyCode.ENTER){
+        currentElement.setText(currentElement.getText() + keyPressed);
+
+      } else {
+        currentElement = new Label("");
+      }
+    });
 
     stage.setTitle("Pixels");
     stage.setScene(scene);
@@ -86,8 +113,21 @@ public class Pixels extends Application implements Observer {
 
     view.setOnMousePressed(e -> {
         if (e.getButton() == MouseButton.PRIMARY) {
+          if(ctrl.getTool() instanceof Text){
+            Label text = new Label();
+
+            currentElement = text;
+            root.getChildren().add(text);
+            text.setTranslateX(e.getX() - 300);
+            text.setTranslateY(e.getY() - 300);
+
+
+          } else {
+
+
             ctrl.setColor(ctrl.getPrimaryColor());
             ctrl.press(getPointFromEvent(size, e));
+          }
         } else if (e.getButton() == MouseButton.SECONDARY) {
             ctrl.setColor(ctrl.getSecondaryColor());
             ctrl.press(getPointFromEvent(size, e));
@@ -120,11 +160,18 @@ public class Pixels extends Application implements Observer {
     return view;
   }
 
+  private Label makeLabel() {
+    Label text = new Label("");
+    return text;
+
+  }
+
+
+
   private Point getPointFromEvent(Rect size, MouseEvent e) {
     Rect bufferSize = ctrl.getImage().getSize();
     double x = e.getX();
     double y = e.getY();
-
     int px = (int) Math.max(0, Math.min(bufferSize.width() - 1, Math.floor(x / size.width() * bufferSize.width())));
     int py = (int) Math.max(0, Math.min(bufferSize.height() - 1, Math.floor(y / size.height() * bufferSize.height())));
 
@@ -175,7 +222,11 @@ public class Pixels extends Application implements Observer {
   private void drawGuidelines(GraphicsContext ctx) {
     ctx.strokeLine(0, canvas.getHeight() / 2, canvas.getWidth(), canvas.getHeight() / 2);
     ctx.strokeLine(canvas.getWidth() / 2, 0, canvas.getWidth() / 2, canvas.getHeight());
-  } 
+  }
+
+
+
+
 
   @Override
   public void onChange() {
