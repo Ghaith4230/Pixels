@@ -23,14 +23,13 @@ import javax.imageio.ImageWriter;
 import javax.imageio.stream.FileImageOutputStream;
 import java.awt.image.BufferedImage;
 
-public class MenuBarFactory {
+public class MenuBarFactory extends MenuBar {
     private static CheckMenuItem lineToolItem;
     private static Menu layers;
     private static int number = 0;
     private static HashMap<String, Image> imageHashMap = new HashMap<>();
    
-    public static MenuBar create(Stage stage, Controller ctrl) {
-        final MenuBar bar = new MenuBar();
+    public MenuBarFactory(Stage stage, Controller ctrl){
         MenuController mctrl = new MenuController(ctrl);
         Menu fileMenu = createFileMenu(stage, mctrl);
         MenuItem saveGif = createSaveGif(stage,mctrl);
@@ -46,7 +45,7 @@ public class MenuBarFactory {
         layoutMenu.getItems().addAll(gridItem, guideItem);
 
         // Adding 'layers' menu
-        layers = new Menu("layers");        
+        layers = new Menu("layers");
         Menu LayerOptions = new Menu("Layer options");
         CheckMenuItem merge = new CheckMenuItem("Merge Layers");
         merge.setOnAction(event -> mctrl.handleMergeLayersSelection(event, merge));
@@ -55,10 +54,8 @@ public class MenuBarFactory {
         LayerOptions.getItems().addAll(merge,duplicateLayer);
 
         // Add the "File", "Help", "layoutMenu" og "layers" menus to the menu bar
-        bar.getMenus().addAll(fileMenu, help, layoutMenu, layers,LayerOptions);
-        bar.setUseSystemMenuBar(true);
-
-        return bar;
+        this.getMenus().addAll(fileMenu, help, layoutMenu, layers,LayerOptions);
+        this.setUseSystemMenuBar(true);
     }
 
     public static int returnIndex(){

@@ -5,6 +5,8 @@ import dtu.compute.pixels.model.Color;
 import dtu.compute.pixels.model.Image;
 import dtu.compute.pixels.model.Point;
 import dtu.compute.pixels.controller.tools.ColorFill;
+import dtu.compute.pixels.model.Rect;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +36,17 @@ public class Controller {
   private boolean showGuidelines = false;
   private Double Angle = 0.0;
   public boolean zoomAllowed = false;
+
+
+  public Controller() {
+    observers = new ArrayList<>();
+    changes = new ArrayList<>();
+  }
+
+
+ public void setScratch(Rect size){
+    this.scratch = new Image(size);
+ }
 
 
   public Color getSecondaryOrPrimary(){
@@ -134,9 +147,7 @@ public class Controller {
     notifyChange();
   }
 
-  public void clearTemporaryLine(Point start, Point end) {
 
-  }
 
   // Making this method public so it can be used by the SquareTool 
   public Point adjustPointToCanvas(Point point) {
@@ -283,11 +294,6 @@ public class Controller {
    // Adding OctagramTool, located under OctagramTool.java :)**
 
   // Constructor initializes observers list
-  public Controller() {
-    observers = new ArrayList<>();
-    changes = new ArrayList<>();
-    
-  }
 
   public List<Point> getCurrentCoordinate() {
       return CurrentCoordinate;
@@ -356,16 +362,13 @@ public class Controller {
     notifyChange();
   }
 
-  public void clearSelectedSquare() {
-    selectedSquare = null;
-    notifyChange();
-  }
+
 
   public Controller setImage(Image image) {
     this.image = image;
     scratch = new Image(image.getSize());
-    
-    
+
+
     return this;
   }
 

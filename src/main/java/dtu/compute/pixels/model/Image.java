@@ -1,4 +1,6 @@
 package dtu.compute.pixels.model;
+import dtu.compute.pixels.controller.tools.Resize;
+
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -10,7 +12,7 @@ public class Image implements Cloneable {
    * The content of the image stored in a Alpha-Red-Green-Blue configuration.
    */
 
-  private final int[] buffer; 
+  private  int[] buffer;
 
   // Constructor initializing image with given size.
   public Image(Rect size) {
@@ -66,6 +68,15 @@ public class Image implements Cloneable {
   // Resets the entire image to a single color.
   public void reset(Color color) {
       Arrays.fill(this.buffer, color.toARGB()); 
+  }
+
+  public void ResizeImage(Rect newSize)
+  {
+    int[] newBuffer = new int[newSize.area()];
+
+    System.arraycopy(buffer,0,newBuffer,0,buffer.length);
+
+    this.buffer = newBuffer;
   }
 
   // Override equals method to compare images

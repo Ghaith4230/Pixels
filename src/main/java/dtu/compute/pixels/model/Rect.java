@@ -17,13 +17,5 @@ public record Rect(int width, int height) {
     }
 
     // Creates a new Rect with the specified width, keeping the same height
-    public Rect withWidth(int width) {
 
-        return new Rect(width, height);
-    }
-
-    public Rect withHeight(int height) {
-
-        return new Rect(width, height);
-    }
 }

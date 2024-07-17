@@ -1,5 +1,7 @@
 package dtu.compute.pixels.model;
 
+import javafx.scene.paint.Paint;
+
 public record Color(byte alpha, byte red, byte green, byte blue) {
 
   // Predefined color constants
@@ -10,7 +12,8 @@ public record Color(byte alpha, byte red, byte green, byte blue) {
   public static final Color BLUE = Color.fromARGB(0xff0000ff);
   public static final Color TRANSPARENT = Color.fromARGB(0);
 
-  public static Color fromARGB(int hex) {
+
+    public static Color fromARGB(int hex) {
     return Color.fromInts(hex >> 24, hex >> 16, hex >> 8, hex);
   }
 

@@ -24,7 +24,7 @@ import javafx.util.Duration;
 import java.util.ArrayList;
 
 
-public class ToolBarFactory {
+public class ToolBarFactory extends ToolBar {
     ToolBar tb;
     Controller ctrl;
     private HBox colors;
@@ -77,6 +77,8 @@ public class ToolBarFactory {
 
 
        Rectangle  text = makeButton("font","text");
+
+       Rectangle resize = makeButton("resize","resize");
 
 
 
@@ -241,13 +243,8 @@ public class ToolBarFactory {
 
         //the box represents the secondary and primary color buttons
         VBox colorButtons = new VBox(5);
-        colorButtons.setPadding(new Insets(0,5,0,5));
-
 
         VBox colorPaleteAndUtilities = new VBox(15);
-
-
-
 
        //made the circle graphic which represents the current selected color for both of the buttons
         Circle primaryGraphic = new Circle(15,Color.BLACK);
@@ -266,16 +263,16 @@ public class ToolBarFactory {
 
         //HBox for all the utility buttons
         HBox utilities = new HBox(15);
-        utilities.getChildren().addAll(picker,colorFill,pipette, eraser,text);
+        utilities.getChildren().addAll(picker,colorFill,pipette, eraser,text,resize);
 
-        colorPallete.setPadding(new Insets(3,5,0,5));
+        colorPallete.setPadding(new Insets(3,0,0,5));
         colorPaleteAndUtilities.getChildren().addAll(colorPallete,utilities);
         colors.getChildren().addAll(colorPaleteAndUtilities, colorButtons);
 
 
 
-        colors.setSpacing(20);
-        tb.getItems().addAll(menuToolsButton, brushSizeSelector, shapesButton, gradientButton, LayerTools,colors, spraySizeContainer, spacer, undo, redo);
+        colors.setSpacing(0);
+        this.getItems().addAll(menuToolsButton, brushSizeSelector, shapesButton, gradientButton, LayerTools, colors);
 
         updateViewTimeLine();
 
@@ -305,9 +302,6 @@ public class ToolBarFactory {
 
     }
 
-    public ToolBar returnToolBar(){
-        return tb;
-    }
   private static Dialog<Color[]> createGradientColorPickerDialog(Controller ctrl) {
 
     Dialog<Color[]> dialog = new Dialog<>();
@@ -524,6 +518,9 @@ public class ToolBarFactory {
                   break;
               case "text":
                   ctrl.setTool(new Text());
+                  break;
+              case "resize":
+                  ctrl.setTool(new Resize());
                   break;
           }
           selectedTool =button;

@@ -3,6 +3,7 @@ package dtu.compute.pixels.view;
 import dtu.compute.pixels.controller.Controller;
 import dtu.compute.pixels.controller.Observer;
 import dtu.compute.pixels.controller.tools.Pen;
+import dtu.compute.pixels.controller.tools.Resize;
 import dtu.compute.pixels.controller.tools.Shortcuts;
 import dtu.compute.pixels.controller.tools.Text;
 import dtu.compute.pixels.model.Color;
@@ -10,46 +11,45 @@ import dtu.compute.pixels.model.Image;
 import dtu.compute.pixels.model.Point;
 import dtu.compute.pixels.model.Rect;
 import dtu.compute.pixels.util.ImageUtils;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
-import javafx.scene.control.ToolBar;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
-import java.util.concurrent.atomic.AtomicReference;
 
 public class Pixels extends Application implements Observer {
 
   // Constants for the initial and canvas size
   private final static Rect START_SIZE = new Rect(1000, 700);
-  private final static Rect CANVAS_SIZE = new Rect(600, 600);
+  private static Rect CANVAS_SIZE = new Rect(600, 600);
   public final Controller ctrl;
   private Canvas canvas;
-  static  BorderPane layout;
-  ToolBarFactory tbf;
   private double currentMouseX;
   private double currentMouseY;
+
+  Point2D canvasXY;
+
   Pane root;
   Label currentElement = new Label("");
+  HBox textBox = new HBox();
 
 
 
   public Pixels() {
     ctrl = new Controller()
-        .setColor(Color.fromARGB(0xff000000))
-        .setTool(new Pen());
+            .setColor(Color.fromARGB(0xff000000))
+            .setTool(new Pen());
   }
 
   public static void main(String[] args) {
@@ -61,39 +61,26 @@ public class Pixels extends Application implements Observer {
 
     root = new StackPane();
     final BorderPane layout = new BorderPane();
-    ctrl.setImage(new Image(new Rect(200 , 200)));
+    ctrl.setImage(new Image(new Rect(200, 200)));
     ctrl.images.add(ctrl.getImage());
-    layout.setTop(MenuBarFactory.create(stage, ctrl));
+    layout.setTop(new MenuBarFactory(stage, ctrl));
     MenuBarFactory.addLayerMenuItem(new MenuBarFactory.MenuController(ctrl));
 
     // Create canvas and set it in the center of the layout
-    canvas = createCanvas(CANVAS_SIZE);
+    canvas = createCanvas();
 
     root.getChildren().addAll(canvas);
     layout.setCenter(root);
 
-    tbf = new ToolBarFactory(ctrl);
-
-    ToolBar tb = tbf.returnToolBar();
-
     // Set up the toolbar and place it at the bottom
-    layout.setBottom(tb);
-    
-   
+    layout.setBottom(new ToolBarFactory(ctrl));
+
+
     Scene scene = new Scene(layout, START_SIZE.width(), START_SIZE.height(),
-        javafx.scene.paint.Color.GRAY);
+            javafx.scene.paint.Color.GRAY);
     Shortcuts.addShortcuts(scene, ctrl);
 
-    scene.setOnKeyPressed(e -> {
-      String keyPressed = e.getText();
-
-      if( e.getCode() != KeyCode.ENTER){
-        currentElement.setText(currentElement.getText() + keyPressed);
-
-      } else {
-        currentElement = new Label("");
-      }
-    });
+    scene.setOnKeyPressed(this::sceneHandleKeyboard);
 
     stage.setTitle("Pixels");
     stage.setScene(scene);
@@ -103,69 +90,140 @@ public class Pixels extends Application implements Observer {
     stage.setMaximized(true);
 
     ctrl.addObserver(this);
+    redraw();
+  }
+
+  private void sceneHandleKeyboard(KeyEvent e) {
+    if (e.getCode() != KeyCode.ENTER) {
+      String newLabel;
+      if (e.getCode() == KeyCode.SPACE) {
+        newLabel = currentElement.getText() + ' ';
+      } else {
+        newLabel = currentElement.getText() + e.getText();
+      }
+      currentElement.setText(newLabel);
+      textBox.setMaxSize(textBox.getWidth() + 8, textBox.getHeight());
+    } else {
+      currentElement = new Label("");
+      textBox.setStyle("");
+    }
+
   }
 
   // Create canvas and set up its behavior for mouse events
-  private Canvas createCanvas(Rect size) {
-    Canvas view = new Canvas(size.width(), size.height());
+  private Canvas createCanvas() {
+    Canvas view = new Canvas(CANVAS_SIZE.width(),CANVAS_SIZE.height());
     final var context = view.getGraphicsContext2D();
     context.setImageSmoothing(false);
-
     view.setOnMousePressed(e -> {
-        if (e.getButton() == MouseButton.PRIMARY) {
-          if(ctrl.getTool() instanceof Text){
-            Label text = new Label();
+      currentMouseX = e.getX();
+      currentMouseY = e.getY();
 
-            currentElement = text;
-            root.getChildren().add(text);
-            text.setTranslateX(e.getX() - 300);
-            text.setTranslateY(e.getY() - 300);
+       canvasXY = canvas.localToScene(0,0);
 
+      view.setStyle(
+              "-fx-border-color: black;" +
+                      "-fx-border-width: 2;" +
+                      "-fx-border-style: dashed;"
 
-          } else {
-
-
-            ctrl.setColor(ctrl.getPrimaryColor());
-            ctrl.press(getPointFromEvent(size, e));
-          }
-        } else if (e.getButton() == MouseButton.SECONDARY) {
-            ctrl.setColor(ctrl.getSecondaryColor());
-            ctrl.press(getPointFromEvent(size, e));
+      );
+      if (e.getButton() == MouseButton.PRIMARY) {
+        if (ctrl.getTool() instanceof Text) {
+          handleText(e);
         } else {
-            ctrl.abandon();
+          ctrl.setColor(ctrl.getPrimaryColor());
+          ctrl.press(getPointFromEvent(CANVAS_SIZE, e));
         }
+      } else if (e.getButton() == MouseButton.SECONDARY) {
+        ctrl.setColor(ctrl.getSecondaryColor());
+        ctrl.press(getPointFromEvent(CANVAS_SIZE, e));
+      } else {
+        ctrl.abandon();
+      }
     });
 
     view.setOnMouseReleased(e -> {
-        if (e.isPrimaryButtonDown() || e.isSecondaryButtonDown()) {
-            return;
-        }
-        ctrl.release(getPointFromEvent(size, e));
+      if (e.isPrimaryButtonDown() || e.isSecondaryButtonDown()) {
+        return;
+      }
+      ctrl.release(getPointFromEvent(CANVAS_SIZE, e));
+      CANVAS_SIZE = new Rect((int)canvas.getWidth(),(int)canvas.getHeight());
     });
 
     // Handle mouse dragging for drawing
     view.setOnMouseDragged(e -> {
-        if (e.getButton() == MouseButton.PRIMARY || e.getButton() == MouseButton.SECONDARY) {
-            ctrl.update(getPointFromEvent(size, e));
+      if (e.getButton() == MouseButton.PRIMARY || e.getButton() == MouseButton.SECONDARY) {
+        if (ctrl.getTool() instanceof Resize) {
+          handleResize(e);
         }
+        ctrl.update(getPointFromEvent(CANVAS_SIZE, e));
+      }
     });
 
     view.setOnMouseMoved(e -> {
-      ctrl.update(getPointFromEvent(size, e));
-      currentMouseY = e.getY();
-      currentMouseX = e.getX();
-  });
-  
-    
+      if (ctrl.getTool() instanceof Resize) {
+        view.setCursor(Cursor.E_RESIZE);
+      } else {
+        view.setCursor(Cursor.DEFAULT);
+      }
+      ctrl.update(getPointFromEvent(CANVAS_SIZE, e));
+
+    });
+
+
     return view;
   }
 
-  private Label makeLabel() {
-    Label text = new Label("");
-    return text;
+  private void handleResize(MouseEvent e) {
+    double dx = e.getX() - currentMouseX;
+    double dy = e.getY() - currentMouseY;
 
+    // Calculate new size, constrained by max width and height
+    double newWidth = canvas.getWidth() + dx / 3;
+    double newHeight = canvas.getHeight() + dy / 3;
+
+    // Apply new size to canvas
+    canvas.setWidth(newWidth);
+    canvas.setHeight(newHeight);
+
+    // Calculate the difference in scene coordinates
+    Point2D newScenePosition = canvas.localToScene(0, 0);
+    double canvasDx = newScenePosition.getX() - canvasXY.getX();
+    double canvasDy = newScenePosition.getY() - canvasXY.getY();
+
+    // Adjust canvas translation to keep top-left corner in place
+
+    System.out.println(canvas.getTranslateX());
+    canvas.setTranslateX(canvas.getTranslateX() - canvasDx);
+    canvas.setTranslateY(canvas.getTranslateY() - canvasDy);
+
+    // Redraw canvas content
+    redraw();
+
+    // Update current mouse position
+    currentMouseX = e.getX();
+    currentMouseY = e.getY();
   }
 
+  private void handleText(MouseEvent e) {
+    Label text = new Label();
+
+    textBox = new HBox();
+
+    text.setPadding(new Insets(4,4,4,4));
+    currentElement = text;
+    textBox.setStyle(
+            "-fx-border-color: black;" +
+                    "-fx-border-width: 2;" +
+                    "-fx-border-style: dashed;"
+
+    );
+    textBox.setMaxSize(text.getWidth() + 4,text.getHeight() + 4);
+    textBox.getChildren().add(text);
+    root.getChildren().add(textBox);
+    textBox.setTranslateX(e.getX() - 300);
+    textBox.setTranslateY(e.getY() - 300);
+  }
 
 
   private Point getPointFromEvent(Rect size, MouseEvent e) {
@@ -177,13 +235,13 @@ public class Pixels extends Application implements Observer {
 
     return new Point(px, py);
   }
-  
+
   public void redraw() {
     GraphicsContext ctx = canvas.getGraphicsContext2D();
     ctx.setFill(Paint.valueOf("white"));
     ctx.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-    
+
     for (Image layer : ctrl.images) {
       if(layer != null){
       javafx.scene.image.Image img = ImageUtils.asJavaFXImage(layer);
@@ -191,7 +249,7 @@ public class Pixels extends Application implements Observer {
               0, 0, img.getWidth(), img.getHeight(),
               0, 0, canvas.getWidth(), canvas.getHeight());
       }
-    } 
+    }
 
     javafx.scene.image.Image himg = ImageUtils.asJavaFXImage(ctrl.getScratch());
     ctx.drawImage(himg,
@@ -210,7 +268,7 @@ public class Pixels extends Application implements Observer {
   }
 
   private void drawGrid(GraphicsContext ctx) {
-    int cellSize = 50; 
+    int cellSize = 50;
     for (int x = 0; x < canvas.getWidth(); x += cellSize) {
         for (int y = 0; y < canvas.getHeight(); y += cellSize) {
             ctx.strokeLine(x, 0, x, canvas.getHeight());
@@ -234,7 +292,7 @@ public class Pixels extends Application implements Observer {
     if(ctrl.zoomAllowed){
       updateZoom();
       }
-    
+
   }
 
     private void updateZoom() {
@@ -256,5 +314,5 @@ public class Pixels extends Application implements Observer {
       canvas.setTranslateX(canvas.getTranslateX() + offsetX * canvasWidth * (1 - zoomFactor));
       canvas.setTranslateY(canvas.getTranslateY() + offsetY * canvasHeight * (1 - zoomFactor));
   }
-  
+
 }
